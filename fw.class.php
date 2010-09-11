@@ -95,6 +95,7 @@ class NyaaFW extends NyaaStore
 		// If Handler returns false stop process
 		if( false === $this->runHandler(self::WHEN_BEFORE_RUN, $this) ) return true;
 		$App = $this->appFactory( $this->get('env.app') );
+		$App->setRequest( $this->Request);
 		if( false === $this->runHandler(self::WHEN_BEFORE_APP_RUN, $this, $App) ) return true;
 		$this->runApp( $App );
 		if( false === $this->runHandler(self::WHEN_AFTER_APP_RUN, $this, $App) ) return true;

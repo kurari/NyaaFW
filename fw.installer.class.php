@@ -69,8 +69,13 @@ class NyaaFWInstaller extends NyaaFW
 
 		foreach($Conf->getOr('alias',array()) as $k=>$v)
 		{
-			$key = "$name.$k";
-			$to  = "$name.$v";
+			if($v == "_root"){
+				$key = "$name.$k";
+				$to  = $name;
+			}else{
+				$key = "$name.$k";
+				$to  = "$name.$v";
+			}
 			$info['app'][$key] = $info['app'][$to];
 			$info['app'][$key]['info'] = "Redirect Of $to";
 		}
