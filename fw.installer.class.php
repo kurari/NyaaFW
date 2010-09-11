@@ -84,10 +84,10 @@ class NyaaFWInstaller extends NyaaFW
 		{
 			$key  = "$name.$k";
 			$from = $dir.'/'.$v;
-			$to   = $this->tpldir ."/$name.$v";
+			$to   = $this->tpldir ."/$name.$k.html";
 			if(file_exists($to)) unlink($to);
 			symlink( $from, $to);
-			$info['template'][$key]['file'] = $this->tpldir."/$name.$v";
+			$info['template'][$key]['file'] = $to;
 			$info['template'][$key]['info'] = $Conf->getOr("info.template.$k", "");
 		}
 
