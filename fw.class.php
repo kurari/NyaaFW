@@ -54,10 +54,10 @@ class NyaaFW extends NyaaStore
 	function __construct( )
 	{
 		parent::__construct( );
-		$this->handlers[self::WHEN_BEFORE_RUN] = array();
-		$this->handlers[self::WHEN_AFTER_RUN] = array();
+		$this->handlers[self::WHEN_BEFORE_RUN]     = array();
+		$this->handlers[self::WHEN_AFTER_RUN]      = array();
 		$this->handlers[self::WHEN_BEFORE_APP_RUN] = array();
-		$this->handlers[self::WHEN_AFTER_APP_RUN] = array();
+		$this->handlers[self::WHEN_AFTER_APP_RUN]  = array();
 	}
 
 	/**
@@ -72,20 +72,18 @@ class NyaaFW extends NyaaStore
 	function run( )
 	{
 		// If Handler returns false stop process
-		if( false === $this->runHandler(self::WHEN_BEFORE_RUN, $this) )
-			return true;
+		if( false === $this->runHandler(self::WHEN_BEFORE_RUN, $this) ) return true;
 		$App = $this->appFactory( $this->get('env.app') );
-		if( false === $this->runHandler(self::WHEN_BEFORE_APP_RUN, $this, $App) )
-			return true;
-		$App->run( );
-		if( false === $this->runHandler(self::WHEN_AFTER_APP_RUN, $this, $App) )
-			return true;
-
-		if( false === $this->runHandler(self::WHEN_AFTER_RUN, $this, $App) )
-			return true;
-		$this->dump( );
+		if( false === $this->runHandler(self::WHEN_BEFORE_APP_RUN, $this, $App) ) return true;
+		$this->runApp( $App );
+		if( false === $this->runHandler(self::WHEN_AFTER_APP_RUN, $this, $App) ) return true;
+		if( false === $this->runHandler(self::WHEN_AFTER_RUN, $this, $App) ) return true;
 	}
 
+	function runApp( $App )
+	{
+		echo $App->run();
+	}
 
 	/**
 	 * Session Set

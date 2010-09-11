@@ -38,6 +38,12 @@ class NyaaFWInstaller extends NyaaFW
 		parent::__construct( );
 	}
 
+	function update( $name )
+	{
+		$this->disable( $name );
+		$this->enable( $name );
+	}
+
 
 	function disable( $name )
 	{
@@ -49,6 +55,9 @@ class NyaaFWInstaller extends NyaaFW
 		$sth = $this->db->prepare('DELETE FROM packages WHERE name=:name');
 		$sth->bindParam('name',$name);
 		$sth->execute();
+
+		$key = array_search($name, $this->enables);
+		unset($this->enables[$key]);
 
 		$dir    = $this->Conf->get('package.dir').'/'.$name;
 		$appdir = $this->Conf->get('app.dir');
@@ -81,6 +90,8 @@ class NyaaFWInstaller extends NyaaFW
 		$appdir = $this->Conf->get('app.dir');
 		$tpldir = $this->Conf->get('template.dir');
 		$info   = NyaaConf::load( $dir.'/info.conf' );
+
+		$info->dump( );
 
 		foreach( $info->get('app') as $k=>$file ){
 			$from = $dir.'/'.$file;

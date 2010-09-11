@@ -13,7 +13,7 @@ class NyaaFWHandlerResource extends NyaaFWHandler
 
 	function trigger( $fw )
 	{
-		if($fw->Request->path_info[1] == $this->key){
+		if($fw->Request->getOr('path_info.1','') == $this->key){
 			$dir = $fw->Conf->resource[$fw->Request->path_info[2]];
 			$file =  $fw->Request->slicePath($fw->Request->path_info[2]);
 			echo file_get_contents( $dir.'/'.$file );

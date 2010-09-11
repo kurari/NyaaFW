@@ -4,6 +4,8 @@
  *
  *
  */
+require_once 'fw/templater.class.php';
+
 class NyaaFWWeb extends NyaaFW
 {
 	/**
@@ -26,9 +28,14 @@ class NyaaFWWeb extends NyaaFW
 		$this->registerHandler(self::WHEN_BEFORE_APP_RUN, array($this,'app_run'));
 	}
 
+	function getTemplater( ){
+		$Tpl = new NyaaFWTemplater( $this );
+		return $Tpl;
+	}
+
 	function app_run( $fw, $App )
 	{
-		$App->dump( );
+		echo $App->myName;
 	}
 
 }
