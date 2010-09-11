@@ -49,8 +49,9 @@ class NyaaFWWeb extends NyaaFW
 	{
 		$contents = ob_get_clean();
 		$Tpl = $this->getTemplater( );
+		$Tpl->set('conf',$this->Conf->get());
 		$Tpl->set('mainContents', $contents);
-		echo $Tpl->fetch('theme.html');
+		echo $Tpl->fetch($this->Conf->rootDir.'/template/theme.html');
 	}
 
 	function getTemplater( ){
