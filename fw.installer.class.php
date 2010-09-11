@@ -15,94 +15,80 @@ class NyaaFWInstaller extends NyaaFW
 	 */
 	function __construct( $Conf )
 	{
-		$this->Conf = $Conf;
+		$this->info = array( );
+		$this->appdir  = $Conf->get('app.dir');
+		$this->tpldir  = $Conf->get('template.dir');
+		$this->pkgdir  = $Conf->get('package.dir');
+		$this->rootdir = $Conf->get('root.dir');
 
-		foreach( $this->Conf->get('app.dir','template.dir','data.dir') as $dir ) {
-			if(!is_dir($dir)) {
-				mkdir($dir, true);
+		foreach($Conf->get('app.dir','template.dir') as $dir){
+			if(!is_dir($dir)){
+				mkdir($dir);
 				chmod($dir, 0777);
 			}
-		}
-		$db = $this->Conf->get('data.dir').'/system.db';
-
-		if(!file_exists($db)){
-			$this->db = NyaaDB::factory('sqlite://localhost/'.$db);
-			$this->db->query('CREATE TABLE packages (name varchar(128) primary key);');
-		}else{
-			$this->db = NyaaDB::factory('sqlite://localhost/'.$db);
-		}
-		$sth = $this->db->query('SELECT name FROM packages;');
-		foreach($sth as $v){
-			$this->enables[] = $v['name'];
 		}
 		parent::__construct( );
 	}
 
-	function update( $name )
+	function save( )
 	{
-		$this->disable( $name );
-		$this->enable( $name );
+		$file = $this->rootdir . "/var/installed";
+		file_put_contents($file, serialize($this->info));
 	}
 
-
-	function disable( $name )
+	function install( $name )
 	{
-		if( !in_array( $name, $this->enables ) ){
-			$this->warning('package %s is alrady disabled', $name);
-			return false;
-		}
-
-		$sth = $this->db->prepare('DELETE FROM packages WHERE name=:name');
-		$sth->bindParam('name',$name);
-		$sth->execute();
-
-		$key = array_search($name, $this->enables);
-		unset($this->enables[$key]);
-
-		$dir    = $this->Conf->get('package.dir').'/'.$name;
-		$appdir = $this->Conf->get('app.dir');
-		$tpldir = $this->Conf->get('template.dir');
-		$info   = NyaaConf::load( $dir.'/info.conf' );
-
-		foreach( $info->get('app') as $k=>$file ){
-			$to = $appdir.'/'.$name.'.'.$k.'.class.php';
-			unlink( $to );
-		}
-
-		foreach( $info->get('template') as $k=>$file ){
-			$to = $tpldir.'/'.$name.'.'.$k.'.html';
-			unlink( $to );
-		}
+		$dir    = $this->pkgdir."/".$name;
+		$this->doInstall( $dir, $name );
 	}
 
-	function enable( $name )
+	function doInstall( $dir, $name )
 	{
-		if( in_array( $name, $this->enables ) ){
-			$this->warning('package %s is alrady enabled', $name);
-			return false;
+		$conf   = $dir.'/package.conf';
+		$Conf   = NyaaConf::load($conf);
+
+		$info =& $this->info;
+		
+		foreach($Conf->getOr('app',array()) as $k=>$v)
+		{
+			if($k == "_root") {
+				$key = $key2 = $name;
+				$key2 = $name.".class.php";
+			}else{
+				$key = "$name.$k";
+				$key2 = "$name.$v";
+			}
+			$from = $dir.'/'.$v;
+			$to = $this->appdir ."/$key2";
+			if(file_exists($to)) unlink($to);
+			symlink( $from, $to);
+			$info['app'][$key]['file'] = $this->appdir."/$key2";
+			$info['app'][$key]['class'] = preg_replace('/([^.]+)[.]{0,1}/e','ucfirst("\1")', $key).'App';
+			$info['app'][$key]['info'] = $Conf->getOr("info.app.$k", "");
 		}
 
-		$sth = $this->db->prepare('INSERT INTO packages (name) VALUES (:name)');
-		$sth->bindParam('name',$name);
-		$sth->execute();
-
-		$dir    = $this->Conf->get('package.dir').'/'.$name;
-		$appdir = $this->Conf->get('app.dir');
-		$tpldir = $this->Conf->get('template.dir');
-		$info   = NyaaConf::load( $dir.'/info.conf' );
-
-		$info->dump( );
-
-		foreach( $info->get('app') as $k=>$file ){
-			$from = $dir.'/'.$file;
-			$to = $appdir.'/'.$name.'.'.$k.'.class.php';
-			symlink( $from, $to );
+		foreach($Conf->getOr('alias',array()) as $k=>$v)
+		{
+			$key = "$name.$k";
+			$to  = "$name.$v";
+			$info['app'][$key] = $info['app'][$to];
+			$info['app'][$key]['info'] = "Redirect Of $to";
 		}
 
-		foreach( $info->get('template') as $k=>$file ){
-			$from = $dir.'/'.$file;
-			$to = $tpldir.'/'.$name.'.'.$k.'.html';
-			symlink( $from, $to );
+		foreach($Conf->getOr('template',array()) as $k=>$v)
+		{
+			$key  = "$name.$k";
+			$from = $dir.'/'.$v;
+			$to   = $this->tpldir ."/$name.$v";
+			if(file_exists($to)) unlink($to);
+			symlink( $from, $to);
+			$info['template'][$key]['file'] = $this->tpldir."/$name.$v";
+			$info['template'][$key]['info'] = $Conf->getOr("info.template.$k", "");
+		}
+
+		foreach($Conf->getOr('package',array()) as $k=>$v)
+		{
+			$this->doInstall( $dir.'/'.$v, "$name.$k" );
 		}
 	}
 

@@ -22,12 +22,12 @@ class NyaaFW extends NyaaStore
 	const WHEN_BEFORE_APP_RUN = 5;
 	const WHEN_AFTER_APP_RUN  = 6;
 
+	const RELEASE = false;
+
 	public $Conf;
 	public $Session;
 	public $Request;
 	public $Cookie;
-
-	public $Appmap;
 
 	public $handlers;
 
@@ -39,15 +39,18 @@ class NyaaFW extends NyaaStore
 	 */
 	public static function factory( $file, $option )
 	{
-		$Conf = NyaaConf::load($file, $option);
+		$CH = NyaaCache::current( );
+		if( self::RELEASE === false || false === $Conf = $CH->get($file, $option) ){
+			$Conf = NyaaConf::load($file, $option);
+			$CH->set($file, $Conf);
+		}
+
 		$type = $Conf->getOr('fw.type','web');
 		$file = dirname(__FILE__)."/fw.$type.class.php";
 		$class = 'NyaaFW'.ucfirst($type);
 		require_once $file;
 		$fw = new $class( $Conf );
-		$appmap = NyaaFWAppmap::factory( $Conf->getOr('fw.appmap', 'default'), $fw);
 
-		$fw->setAppmap( $appmap );
 		return $fw;
 	}
 
@@ -60,13 +63,31 @@ class NyaaFW extends NyaaStore
 		$this->handlers[self::WHEN_AFTER_APP_RUN]  = array();
 	}
 
+	function appFactory( $name )
+	{
+		$info = $this->AppInfo['app'][$name];
+		require_once $info['file'];
+		$App = new $info['class']( $this );
+		$App->set('my.url', $this->Conf->siteUrl."/app/".$name );
+		$App->set('my.name', $name);
+		$App->init( );
+		return $App;
+	}
+
 	/**
 	 * Initialize
 	 */
 	function init( )
 	{
-		$appName = $this->Appmap->getCurrentAppName( );
-		$this->set('env.app', $appName);
+		$CH = NyaaCache::current( );
+		if( self::RELEASE === false || false === $AppInfo = $CH->get('appinfo', $option) ){
+			$AppInfo = unserialize(file_get_contents($this->Conf->rootDir.'/var/installed'));
+			$CH->set('appinfo', $AppInfo);
+		}
+		$this->AppInfo = $AppInfo;
+
+		// Get Current Application Name
+		$this->set('env.app', $this->parseAppName($this->Request->getOr('app', $this->Conf->appDefault)));
 	}
 
 	function run( )
@@ -84,6 +105,12 @@ class NyaaFW extends NyaaStore
 	{
 		echo $App->run();
 	}
+
+	function parseAppName( $name )
+	{
+		return preg_replace('/#(.*)/e', '$this->Conf->get(\'app.map.\1\')', $name);
+	}
+
 
 	/**
 	 * Session Set
@@ -118,15 +145,6 @@ class NyaaFW extends NyaaStore
 	}
 
 	/**
-	 * Set App Mapper
-	 */
-	function setAppmap( $appmap )
-	{
-		$this->Appmap = $appmap;
-		return $this->Appmap;
-	}
-
-	/**
 	 * Register Handler
 	 */
 	function registerHandler( $when, $handler )
@@ -148,19 +166,9 @@ class NyaaFW extends NyaaStore
 	}
 
 
-	function appFactory( $name )
-	{
-		list($name,$file,$class) = $this->Appmap->getAppInfo( $name );
-		require_once $file;
-		$App =  new $class( $this );
-		$App->set('my.url', $this->Appmap->createUrl( $name ));
-		$App->set('my.name', $name);
-		$App->init( );
-		return $App;
-	}
-
 	function dump( )
 	{
+		parent::dump( );
 		echo "Session";
 		$this->Session->dump( );
 		echo "Cookie";

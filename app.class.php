@@ -28,5 +28,10 @@ class NyaaFWApp extends NyaaStore
 
 	}
 
+	function doSnippet( $method, $option )
+	{
+		return call_user_func( array($this,'snip'.ucfirst($method)), $option);
+	}
+
 }
 ?>
